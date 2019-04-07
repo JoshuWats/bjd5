@@ -10,7 +10,9 @@
         Port,
         Eprt,
         Pasv,
-        Epsv,
+        Epsv,       
+        Size,
+        // 6.2.0.1 ローカルでSIZEコマンドが必要なので追加した(RFC:3659)
         Retr,
         Stor,
         Rnfr,

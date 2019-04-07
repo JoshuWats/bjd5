@@ -28,8 +28,8 @@ using System.Runtime.InteropServices;
 //      Build Number
 //      Revision
 //
-[assembly: AssemblyVersion("6.2.0")]
-[assembly: AssemblyFileVersion("6.2.0")]
+[assembly: AssemblyVersion("6.2.0.2")]
+[assembly: AssemblyFileVersion("6.2.0.2")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("TestBJD")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("BJDTestProject")]
 

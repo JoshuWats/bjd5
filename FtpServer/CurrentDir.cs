@@ -220,6 +220,12 @@ namespace FtpServer{
 
             // 「homeDir」「CurrentDir」及び「newDir」は '\\' 区切り 「param」は、'/'区切りで取り扱われる
 
+            //CWDで目的のパスへ移動してからファイル名のみ与えるRETRで550になる
+            //問題の回避(5.6.5-6.2.0)カレントディレクトリの付与
+            if (param[0] != '.' || param[0] != '/') {
+                param = "./" + param;
+            }
+
             //paramの'/'を'\\'に変換する
             //param = Util.SwapChar('/', '\\', param);
             param = param.Replace('/', '\\');

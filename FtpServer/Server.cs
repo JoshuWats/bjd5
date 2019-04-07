@@ -24,9 +24,9 @@ namespace FtpServer{
         public Server(Kernel kernel, Conf conf, OneBind oneBind) : base(kernel, conf, oneBind){
 
             _bannerMessage = kernel.ChangeTag((String) Conf.Get("bannerMessage"));
-            //���[�U���
+            //ユーザ情報
             _listUser = new ListUser((Dat) Conf.Get("user"));
-            //���z�t�H���_
+            //仮想フォルダ
             _listMount = new ListMount((Dat) Conf.Get("mountList"));
 
 
@@ -43,41 +43,41 @@ namespace FtpServer{
 
 
         protected override void OnSubThread(SockObj sockObj){
-            //�Z�b�V�������Ƃ̏��
+            //セッションごとの情報
             var session = new Session((SockTcp) sockObj);
 
-            //���̃R�l�N�V�����̊ԁA�P�ÂC���N�����g���Ȃ���g�p�����
-            //�{���́A�ؒf�����|�[�g�ԍ��͍ė��p�\�Ȃ̂ŁA�C���N�������g�̕K�v�͖������A
-            //�Z���Ԃōė��p���悤�Ƃ���ƃG���[����������ꍇ������̂ŁA���������ړI�ŃC���N�������g���Ďg�p���Ă���
+            //このコネクションの間、１つづつインクメントしながら使用される
+            //本来は、切断したポート番号は再利用可能なので、インクリメントの必要は無いが、
+            //短時間で再利用しようとするとエラーが発生する場合があるので、これを避ける目的でインクリメントして使用している
 
-            //�O���[�e�B���O���b�Z�[�W�̑��M
+            //グリーティングメッセージの送信
             session.StringSend(string.Format("220 {0}", _bannerMessage));
 
-            //�R�l�N�V������p�����邩�ǂ����̃t���O
+            //コネクションを継続するかどうかのフラグ
             var result = true;
 
             while (IsLife() && result){
-                //���̃��[�v�͍ŏ��ɃN���C�A���g����̃R�}���h��P�s��M���A�Ō�ɁA
-                //sockCtrl.LineSend(resStr)�Ń��X�|���X������s��
-                //continue��w�肵���ꍇ�́A���X�|���X��Ԃ����Ɏ��̃R�}���h��M�ɓ���i��O�����p�j
-                //break��w�肵���ꍇ�́A�R�l�N�V�����̏I����Ӗ�����iQUIT ABORT �y�уG���[�̏ꍇ�j
+                //このループは最初にクライアントからのコマンドを１行受信し、最後に、
+                //sockCtrl.LineSend(resStr)でレスポンス処理を行う
+                //continueを指定した場合は、レスポンスを返さずに次のコマンド受信に入る（例外処理用）
+                //breakを指定した場合は、コネクションの終了を意味する（QUIT ABORT 及びエラーの場合）
 
                 Thread.Sleep(0);
 
                 var cmd = recvCmd(session.SockCtrl);
                 if (cmd == null){
-                    //�ؒf����Ă���
+                    //切断されている
                     break;
                 }
 
                 if (cmd.Str == ""){
                     session.StringSend("500 Invalid command: try being more creative.");
-                    //��M�ҋ@��
+                    //受信待機中
                     //Thread.Sleep(100);
                     continue;
                 }
 
-                //�R�}���h������̉��
+                //コマンド文字列の解釈
                 //var ftpCmd = (FtpCmd) Enum.Parse(typeof (FtpCmd), cmd.CmdStr);
                 var ftpCmd = FtpCmd.Unknown;
                 foreach (FtpCmd n in Enum.GetValues(typeof(FtpCmd))) {
@@ -91,19 +91,19 @@ namespace FtpServer{
                 //FtpCmd ftpCmd = FtpCmd.parse(cmd.CmdStr);
                 var param = cmd.ParamStr;
 
-                //SYST�R�}���h���L�����ǂ����̔��f
+                //SYSTコマンドが有効かどうかの判断
                 if (ftpCmd == FtpCmd.Syst){
                     if (!(bool) Conf.Get("useSyst")){
                         ftpCmd = FtpCmd.Unknown;
                     }
                 }
-                //�R�}���h�������ȏꍇ�̏���
+                //コマンドが無効な場合の処理
                 if (ftpCmd == FtpCmd.Unknown){
                     //session.StringSend("502 Command not implemented.");
                     session.StringSend("500 Command not understood.");
                 }
 
-                //QUIT�͂��ł�󂯕t����
+                //QUITはいつでも受け付ける
                 if (ftpCmd == FtpCmd.Quit){
                     session.StringSend("221 Goodbye.");
                     break;
@@ -114,117 +114,148 @@ namespace FtpServer{
                     break;
                 }
 
-                //			//����́A���O�C���������󂯕t���Ȃ��R�}���h����H
-                //			//RNFR�Ŏw�肳�ꂽ�p�X�̖�����
+                //			//これは、ログイン中しか受け付けないコマンドかも？
+                //			//RNFRで指定されたパスの無効化
                 //			if (ftpCmd != FtpCmd.Rnfr) {
                 //				session.setRnfrName("");
                 //			}
 
-                // �R�}���h�g�ւ�
+                // コマンド組替え
                 if (ftpCmd == FtpCmd.Cdup){
                     param = "..";
                     ftpCmd = FtpCmd.Cwd;
                 }
 
-                //�s���A�N�Z�X�Ώ� �p�����[�^�ɋɒ[�ɒ���������𑗂荞�܂ꂽ�ꍇ
+                //不正アクセス対処 パラメータに極端に長い文字列を送り込まれた場合
                 if (param.Length > 128){
                     Logger.Set(LogKind.Secure, session.SockCtrl, 1, string.Format("{0} Length={1}", ftpCmd, param.Length));
                     break;
                 }
 
-                //�f�t�H���g�̃��X�|���X������
-                //���������ׂĒʉ߂��Ă��܂����ꍇ�A���̕����񂪕Ԃ����
+                //デフォルトのレスポンス文字列
+                //処理がすべて通過してしまった場合、この文字列が返される
                 //String resStr2 = string.Format("451 {0} error", ftpCmd);
 
-                // ���O�C���O�̏���
-                if (session.CurrentDir == null){
+                // ログイン前の処理
+                if (session.CurrentDir == null) {
                     //ftpCmd == FTP_CMD.PASS
-                    //������
-                    //PASS�̑O��USER�R�}���h��K�v�Ƃ���
+                    //未実装
+                    //PASSの前にUSERコマンドを必要とする
                     //sockCtrl.LineSend("503 Login with USER first.");
 
-                    if (ftpCmd == FtpCmd.User){
-                        if (param == ""){
+                    if (ftpCmd == FtpCmd.User) {
+                        if (param == "") {
                             session.StringSend(string.Format("500 {0}: command requires a parameter.", ftpCmd.ToString().ToUpper()));
                             continue;
                         }
                         result = JobUser(session, param);
-                    } else if (ftpCmd == FtpCmd.Pass){
+                    } else if (ftpCmd == FtpCmd.Pass) {
                         result = JobPass(session, param);
-                    } else{
-                        //USER�APASS�ȊO�̓G���[��Ԃ�
+                    } else {
+                        //USER、PASS以外はエラーを返す
                         session.StringSend("530 Please login with USER and PASS.");
                     }
-                    // ���O�C����̏���
-                } else{
-                    // �p�����[�^�̊m�F(�p�����[�^�������ꍇ�̓G���[��Ԃ�)
-                    if (param == ""){
-                        if (ftpCmd == FtpCmd.Cwd || ftpCmd == FtpCmd.Type || ftpCmd == FtpCmd.Mkd || ftpCmd == FtpCmd.Rmd || ftpCmd == FtpCmd.Dele || ftpCmd == FtpCmd.Port || ftpCmd == FtpCmd.Rnfr || ftpCmd == FtpCmd.Rnto || ftpCmd == FtpCmd.Stor || ftpCmd == FtpCmd.Retr){
+                    // ログイン後の処理
+                }
+                else {
+                    // パラメータの確認(パラメータが無い場合はエラーを返す)
+                    if (param == "") {
+                        if (ftpCmd == FtpCmd.Cwd || ftpCmd == FtpCmd.Type || ftpCmd == FtpCmd.Mkd || ftpCmd == FtpCmd.Rmd || ftpCmd == FtpCmd.Dele || ftpCmd == FtpCmd.Port || ftpCmd == FtpCmd.Rnfr || ftpCmd == FtpCmd.Rnto || ftpCmd == FtpCmd.Stor || ftpCmd == FtpCmd.Retr) {
                             //session.StringSend("500 command not understood:");
                             session.StringSend(string.Format("500 {0}: command requires a parameter.", ftpCmd.ToString().ToUpper()));
                             continue;
                         }
                     }
 
-                    // �f�[�^�R�l�N�V�����������ƃG���[�ƂȂ�R�}���h
-                    if (ftpCmd == FtpCmd.Nlst || ftpCmd == FtpCmd.List || ftpCmd == FtpCmd.Stor || ftpCmd == FtpCmd.Retr){
-                        if (session.SockData == null || session.SockData.SockState !=Bjd.sock.SockState.Connect){
+                    // データコネクションが無いとエラーとなるコマンド
+                    if (ftpCmd == FtpCmd.Nlst || ftpCmd == FtpCmd.List || ftpCmd == FtpCmd.Stor || ftpCmd == FtpCmd.Retr) {
+                        if (session.SockData == null || session.SockData.SockState != Bjd.sock.SockState.Connect) {
                             session.StringSend("226 data connection close.");
                             continue;
                         }
                     }
-                    // ���[�U�̃A�N�Z�X���ɃG���[�ƂȂ�R�}���h
-                    if (session.OneUser != null){
-                        if (session.OneUser.FtpAcl == FtpAcl.Down){
-                            if (ftpCmd == FtpCmd.Stor || ftpCmd == FtpCmd.Dele || ftpCmd == FtpCmd.Rnfr || ftpCmd == FtpCmd.Rnto || ftpCmd == FtpCmd.Rmd || ftpCmd == FtpCmd.Mkd){
+                    // ユーザのアクセス権にエラーとなるコマンド
+                    if (session.OneUser != null) {
+                        if (session.OneUser.FtpAcl == FtpAcl.Down) {
+                            if (ftpCmd == FtpCmd.Stor || ftpCmd == FtpCmd.Dele || ftpCmd == FtpCmd.Rnfr || ftpCmd == FtpCmd.Rnto || ftpCmd == FtpCmd.Rmd || ftpCmd == FtpCmd.Mkd) {
                                 session.StringSend("550 Permission denied.");
                                 continue;
                             }
-                        } else if (session.OneUser.FtpAcl == FtpAcl.Up){
-                            if (ftpCmd == FtpCmd.Retr || ftpCmd == FtpCmd.Dele || ftpCmd == FtpCmd.Rnfr || ftpCmd == FtpCmd.Rnto || ftpCmd == FtpCmd.Rmd || ftpCmd == FtpCmd.Mkd){
+                        } else if (session.OneUser.FtpAcl == FtpAcl.Up) {
+                            if (ftpCmd == FtpCmd.Retr || ftpCmd == FtpCmd.Dele || ftpCmd == FtpCmd.Rnfr || ftpCmd == FtpCmd.Rnto || ftpCmd == FtpCmd.Rmd || ftpCmd == FtpCmd.Mkd) {
                                 session.StringSend("550 Permission denied.");
                                 continue;
                             }
                         }
                     }
 
-                    // ���O�C����(�F�؊����j���́AUSER�APASS ��󂯕t���Ȃ�
-                    if (ftpCmd == FtpCmd.User || ftpCmd == FtpCmd.Pass){
+                    // ログイン中(認証完了）時は、USER、PASS を受け付けない
+                    if (ftpCmd == FtpCmd.User || ftpCmd == FtpCmd.Pass) {
                         session.StringSend("530 Already logged in.");
                         continue;
                     }
 
-                    if (ftpCmd == FtpCmd.Noop){
+                    if (ftpCmd == FtpCmd.Noop)
+                    {
                         session.StringSend("200 NOOP command successful.");
-                    } else if (ftpCmd == FtpCmd.Pwd || ftpCmd == FtpCmd.Xpwd){
+                    }
+                    else if (ftpCmd == FtpCmd.Pwd || ftpCmd == FtpCmd.Xpwd)
+                    {
                         session.StringSend(string.Format("257 \"{0}\" is current directory.", session.CurrentDir.GetPwd()));
-                    } else if (ftpCmd == FtpCmd.Cwd){
+                    }
+                    else if (ftpCmd == FtpCmd.Cwd)
+                    {
                         result = JobCwd(session, param);
-                    } else if (ftpCmd == FtpCmd.Syst){
+                    }
+                    else if (ftpCmd == FtpCmd.Syst)
+                    {
                         var os = Environment.OSVersion;
                         session.StringSend(string.Format("215 {0}", os.VersionString));
-                    } else if (ftpCmd == FtpCmd.Type){
+                    }
+                    else if (ftpCmd == FtpCmd.Type)
+                    {
                         result = JobType(session, param);
-                    } else if (ftpCmd == FtpCmd.Mkd || ftpCmd == FtpCmd.Rmd || ftpCmd == FtpCmd.Dele){
+                    }
+                    else if (ftpCmd == FtpCmd.Mkd || ftpCmd == FtpCmd.Rmd || ftpCmd == FtpCmd.Dele)
+                    {
                         result = JobDir(session, param, ftpCmd);
-                    } else if (ftpCmd == FtpCmd.Nlst || ftpCmd == FtpCmd.List){
+                    }
+                    else if (ftpCmd == FtpCmd.Nlst || ftpCmd == FtpCmd.List)
+                    {
                         result = JobNlist(session, param, ftpCmd);
-                    } else if (ftpCmd == FtpCmd.Port || ftpCmd == FtpCmd.Eprt){
+                    }
+                    else if (ftpCmd == FtpCmd.Port || ftpCmd == FtpCmd.Eprt)
+                    {
                         result = JobPort(session, param, ftpCmd);
-                    } else if (ftpCmd == FtpCmd.Pasv || ftpCmd == FtpCmd.Epsv){
+                    }
+                    else if (ftpCmd == FtpCmd.Pasv || ftpCmd == FtpCmd.Epsv)
+                    {
                         result = JobPasv(session, ftpCmd);
-                    } else if (ftpCmd == FtpCmd.Rnfr){
-                        result = jobRnfr(session, param, ftpCmd);
-                    } else if (ftpCmd == FtpCmd.Rnto){
+                    }
+                    else if (ftpCmd == FtpCmd.Size)
+                    // 6.2.0.1 ローカルでSIZEコマンドが必要なので追加した(RFC:3659) 
+                    {
+                        result = JobSize(session, param, ftpCmd);
+                    }
+                    else if (ftpCmd == FtpCmd.Rnfr)
+                    {
+                        result =jobRnfr(session, param, ftpCmd);
+                    }
+                    else if (ftpCmd == FtpCmd.Rnto)
+                    {
                         result = JobRnto(session, param, ftpCmd);
-                    } else if (ftpCmd == FtpCmd.Stor){
+                    }
+                    else if (ftpCmd == FtpCmd.Stor)
+                    {
                         result = JobStor(session, param, ftpCmd);
-                    } else if (ftpCmd == FtpCmd.Retr){
+                    }
+                    else if (ftpCmd == FtpCmd.Retr)
+                    {
                         result = JobRetr(session, param);
                     }
                 }
             }
-            //���O�C�����Ă���ꍇ�́A���O�A�E�g�̃��O��o�͂���
+            //ログインしている場合は、ログアウトのログを出力する
             if (session.CurrentDir != null){
                 //logout
                 Logger.Set(LogKind.Normal, session.SockCtrl, 13, string.Format("{0}", session.OneUser.UserName));
@@ -237,11 +268,11 @@ namespace FtpServer{
 
         private static bool JobUser(Session session, String userName){
 
-            //���M���ꂽ���[�U����L������
-            //���[�U�����݂��邩�ǂ����́APASS�R�}���h�̎��_�ŕ]�������
+            //送信されたユーザ名を記憶する
+            //ユーザが存在するかどうかは、PASSコマンドの時点で評価される
             session.UserName = userName;
 
-            //���[�U���̗L���E�����Ɋ֌W�Ȃ��p�X���[�h�̓��͂𑣂�
+            //ユーザ名の有効・無効に関係なくパスワードの入力を促す
             session.StringSend(string.Format("331 Password required for {0}.", userName));
             return true;
 
@@ -249,22 +280,22 @@ namespace FtpServer{
 
         private bool JobPass(Session session, String password){
 
-            //�܂�USER�R�}���h���������Ă��Ȃ��ꍇ
+            //まだUSERコマンドが到着していない場合
             if (session.UserName == null){
                 session.StringSend("503 Login with USER first.");
                 return true;
             }
 
-            //���[�U��񌟍�
+            //ユーザ情報検索
             session.OneUser = _listUser.Get(session.UserName);
 
             if (session.OneUser == null){
-                //�����ȃ��[�U�̏ꍇ
+                //無効なユーザの場合
                 Logger.Set(LogKind.Secure, session.SockCtrl, 14, string.Format("USER:{0} PASS:{1}", session.UserName, password));
             } else{
-                //�p�X���[�h�m�F
+                //パスワード確認
                 bool success = false;
-                // *�̏ꍇ�AAnonymous�ڑ��Ƃ��ď�������
+                // *の場合、Anonymous接続として処理する
                 if (session.OneUser.Password == "*"){
                     //oneUser.UserName = string.Format("{0}(ANONYMOUS)",oneUser.UserName);
                     Logger.Set(LogKind.Normal, session.SockCtrl, 5, string.Format("{0}(ANONYMOUS) {1}", session.OneUser.UserName, password));
@@ -275,31 +306,31 @@ namespace FtpServer{
                 }
 
                 if (success){
-                    //�ȉ��A�p�X���[�h�F�؂ɐ��������ꍇ�̏���
-                    //�z�[���f�B���N�g���̑��݊m�F
-                    //�T�[�o�N���i�^�c�j���Ƀf�B���N�g�����폜����Ă���\��������̂ŁA���̎��_�Ŋm�F����
+                    //以下、パスワード認証に成功した場合の処理
+                    //ホームディレクトリの存在確認
+                    //サーバ起動（運営）中にディレクトリが削除されている可能性があるので、この時点で確認する
                     if (Util.Exists(session.OneUser.HomeDir) != ExistsKind.Dir){
-                        //�z�[���f�B���N�g�������݂��܂���i�������p���ł��Ȃ����ߐؒf���܂���
+                        //ホームディレクトリが存在しません（処理が継続できないため切断しました
                         Logger.Set(LogKind.Error, session.SockCtrl, 2, string.Format("userName={0} hoemDir={1}", session.OneUser.UserName, session.OneUser.HomeDir));
                         return false;
                     }
 
-                    //���O�C������ �i�J�����g�f�B���N�g���́A�z�[���f�B���N�g���ŏ����������j
+                    //ログイン成功 （カレントディレクトリは、ホームディレクトリで初期化される）
                     session.CurrentDir = new CurrentDir(session.OneUser.HomeDir, _listMount);
 
                     session.StringSend(string.Format("230 User {0} logged in.", session.UserName));
                     return true;
                 }
-                //�ȉ��F�؎��s����
+                //以下認証失敗処理
                 Logger.Set(LogKind.Secure, session.SockCtrl, 15, string.Format("USER:{0} PASS:{1}", session.UserName, password));
             }
             var reservationTime = (int) Conf.Get("reservationTime");
 
-            //�u���[�g�t�H�[�X�h�~�̂��߂̃E�G�C�g(5�b)
+            //ブルートフォース防止のためのウエイト(5秒)
             for (int i = 0; i < reservationTime/100 && IsLife(); i++){
                 Thread.Sleep(100);
             }
-            //�F�؂Ɏ��s�����ꍇ�̏���
+            //認証に失敗した場合の処理
             session.StringSend("530 Login incorrect.");
             return true;
 
@@ -336,19 +367,21 @@ namespace FtpServer{
         private bool JobDir(Session session, String param, FtpCmd ftpCmd){
             bool isDir = !(ftpCmd == FtpCmd.Dele);
             int retCode = -1;
-            //�p�����[�^����V�����p�X���𐶐�����
+            //パラメータから新しいパス名を生成する
             var path = session.CurrentDir.CreatePath(null, param, isDir);
             if (path == null){
-                //TODO �G���[���O�擾�͂��K�v
-            } else{
+                //TODO エラーログ取得力が必要
+            }
+            else
+            {
                 if (ftpCmd == FtpCmd.Mkd){
-                    //�f�B���N�g���͖�����?
-                    if (!Directory.Exists(path)) {//�f�B���N�g���͖�����?
+                    //ディレクトリは無いか?
+                    if (!Directory.Exists(path)) {//ディレクトリは無いか?
                         Directory.CreateDirectory(path);
                         retCode = 257;
                     }
                 } else if (ftpCmd == FtpCmd.Rmd) {
-                    if (Directory.Exists(path)) {//�f�B���N�g���͗L�邩?
+                    if (Directory.Exists(path)) {//ディレクトリは有るか?
                         try{
                             Directory.Delete(path);
                             retCode = 250;
@@ -357,20 +390,20 @@ namespace FtpServer{
                         }
                     }
                 } else if (ftpCmd == FtpCmd.Dele) {
-                    if (File.Exists(path)) {//�t�@�C���͗L�邩?
+                    if (File.Exists(path)) {//ファイルは有るか?
                         File.Delete(path);
                         retCode = 250;
                     }
                 }
 
                 if (retCode != -1){
-                    //����
+                    //成功
                     Logger.Set(LogKind.Normal, session.SockCtrl, 7, string.Format("User:{0} Cmd:{1} Path:{2}", session.OneUser.UserName, ftpCmd, path));
                     session.StringSend(string.Format("{0} {1} command successful.", retCode, ftpCmd));
                     return true;
                 }
-                //���s
-                //�R�}���h�����ŃG���[���������܂���
+                //失敗
+                //コマンド処理でエラーが発生しました
                 Logger.Set(LogKind.Error, session.SockCtrl, 3, string.Format("User:{0} Cmd:{1} Path:{2}", session.OneUser.UserName, ftpCmd, path));
             }
             session.StringSend(string.Format("451 {0} error.", ftpCmd));
@@ -378,11 +411,11 @@ namespace FtpServer{
         }
 
         private bool JobNlist(Session session, String param, FtpCmd ftpCmd){
-            // �Z�k���X�g���ǂ���
+            // 短縮リストかどうか
             var wideMode = (ftpCmd == FtpCmd.List);
             var mask = "*.*";
 
-            //�p�����[�^���w�肳��Ă���ꍇ�A�}�X�N��擾����
+            //パラメータが指定されている場合、マスクを取得する
             if (param != ""){
                 foreach (var p in param.Split(' ')){
                     if (p == ""){
@@ -393,13 +426,14 @@ namespace FtpServer{
                     }else if(p.ToUpper().IndexOf("-A") == 0) {
                         wideMode = true;
                     } else{
-                        //���C���h�J�[�h�w��
+                        //ワイルドカード指定
                         if (p.IndexOf('*') != -1 || p.IndexOf('?') != -1){
                             mask = param;
                         } else{
-                            //�t�H���_�w��
+                            //フォルダ指定
                             //Ver5.9.0
-                            try {
+                            try
+                            {
                                 var existsKind = Util.Exists(session.CurrentDir.CreatePath(null, param, false));
                                 switch (existsKind) {
                                     case ExistsKind.Dir:
@@ -424,7 +458,7 @@ namespace FtpServer{
                 }
             }
             session.StringSend(string.Format("150 Opening {0} mode data connection for ls.", session.FtpType.ToString().ToUpper()));
-            //�t�@�C���ꗗ�擾
+            //ファイル一覧取得
             foreach (var s in session.CurrentDir.List(mask, wideMode)){
                 session.SockData.StringSend(s, "Shift-Jis");
             }
@@ -485,15 +519,15 @@ namespace FtpServer{
         private bool JobPasv(Session session, FtpCmd ftpCmd){
             var port = session.Port;
             var ip = session.SockCtrl.LocalIp;
-            // �f�[�^�X�g���[���̃\�P�b�g�̍쐬
+            // データストリームのソケットの作成
             for (int i = 0; i < 100; i++){
                 port++;
                 if (port >= 9999){
                     port = 2000;
                 }
-                //�o�C���h�\���ǂ����̊m�F
+                //バインド可能かどうかの確認
                 if (SockServer.IsAvailable(Kernel,ip, port)){
-                    //����
+                    //成功
                     if (ftpCmd == FtpCmd.Epsv){
                         //Java fix Ver5.8.3
                         //session.StringSend(string.Format("229 Entering Extended Passive Mode. (|||{0}|)", port));
@@ -504,14 +538,14 @@ namespace FtpServer{
                         //session.StringSend(string.Format("227 Entering Passive Mode. ({0},{1},{2})", ipStr.Replace('.',','), port/256, port%256));
                         session.StringSend(string.Format("227 Entering Passive Mode ({0},{1},{2})", ipStr.Replace('.', ','), port / 256, port % 256));
                     }
-                    //�w�肵���A�h���X�E�|�[�g�ő҂��󂯂�
+                    //指定したアドレス・ポートで待ち受ける
                     var sockData = SockServer.CreateConnection(Kernel,ip, port, null, this);
                     if (sockData == null){
-                        //�ڑ����s
+                        //接続失敗
                         return false;
                     }
                     if (sockData.SockState != Bjd.sock.SockState.Error){
-                        //�Z�b�V�������̕ۑ�
+                        //セッション情報の保存
                         session.Port = port;
                         session.SockData = sockData;
                         return true;
@@ -522,13 +556,38 @@ namespace FtpServer{
             return true;
         }
 
+        private bool JobSize(Session session, String param, FtpCmd ftpCmd)
+        {
+               // Version. 6.2.0+(6.2.1) RFC:3659
+            var path = session.CurrentDir.CreatePath(null, param, false);
+            if (path == null)
+            {
+                // session.StringSend("550 Permission denied.");
+                session.StringSend("550 Permission denied.");
+
+                return false;
+            }
+
+            if (Util.Exists(path) == ExistsKind.File)
+            {
+
+                var dirName = Path.GetDirectoryName(path);
+                var fileName = Path.GetFileName(path);
+                var di = new DirectoryInfo(dirName);
+                var files = di.GetFiles(fileName);
+                session.StringSend(string.Format("213 {0}", files[0].Length));
+                return true;
+            }
+            return true;
+        }
+
         private bool JobRnto(Session session, String param, FtpCmd ftpCmd){
             //Ver6.0.4
             //if (session.RnfrName != "") {
             if (!string.IsNullOrEmpty(session.RnfrName)) {
                 var path = session.CurrentDir.CreatePath(null, param, false);
-                
-                //Ver6.0.3 �f�B���N�g���g���o�[�T��
+
+                //Ver6.0.3 ディレクトリトラバーサル
                 if (path == null) {
                     session.StringSend("550 Permission denied.");
                     return false;
@@ -542,12 +601,12 @@ namespace FtpServer{
                 if (existsKind == ExistsKind.File){
                     File.Delete(path);
                 }
-                if (Directory.Exists(session.RnfrName)) {//�ύX�̑Ώۂ��f�B���N�g���ł���ꍇ
+                if (Directory.Exists(session.RnfrName)) {//変更の対象がディレクトリである場合
                     Directory.Move(session.RnfrName, path);
-                } else {//�ύX�̑Ώۂ��t�@�C���ł���ꍇ
+                } else {//変更の対象がファイルである場合
                     //Ver6.0.4
                     if (!Directory.Exists(Path.GetDirectoryName(path))){
-                        //�w���̃f�B���N�g�������݂��Ȃ��ꍇ�̃G���[                        
+                        //指定先のディレクトリが存在しない場合のエラー                        
                         session.StringSend("550 Permission denied.");
                         return false;
                     }
@@ -563,7 +622,7 @@ namespace FtpServer{
 
         private bool jobRnfr(Session session, String param, FtpCmd ftpCmd){
             var path = session.CurrentDir.CreatePath(null, param, false);
-            //Ver6.0.3 �f�B���N�g���g���o�[�T��
+            //Ver6.0.3 ディレクトリトラバーサル
             if (path == null) {
                 session.StringSend("550 Permission denied.");
                 return false;
@@ -580,8 +639,8 @@ namespace FtpServer{
 
         private bool JobStor(Session session, String param, FtpCmd ftpCmd){
             String path = session.CurrentDir.CreatePath(null, param, false);
-            
-            //Ver6.0.3 �f�B���N�g���g���o�[�T��
+
+            //Ver6.0.3 ディレクトリトラバーサル
             if (path==null){
                 session.StringSend("550 Permission denied.");
                 return true;
@@ -591,7 +650,7 @@ namespace FtpServer{
             if (exists != ExistsKind.Dir){
                 //File file = new File(path);
                 if (exists == ExistsKind.File){
-                    // �A�b�v���[�h���[�U�́A�����̃t�@�C����㏑���ł��Ȃ�
+                    // アップロードユーザは、既存のファイルを上書きできない
                     if (session.OneUser.FtpAcl == FtpAcl.Up && File.Exists(path)){
                         session.StringSend("550 Permission denied.");
                         return true;
@@ -625,9 +684,11 @@ namespace FtpServer{
 
         private bool JobRetr(Session session, String param){
             var path = session.CurrentDir.CreatePath(null, param, false);
-            //Ver6.0.3 �f�B���N�g���g���o�[�T��
+            //Ver6.0.3 ディレクトリトラバーサル
             if (path == null) {
-                session.StringSend("550 Permission denied.");
+               // session.StringSend("550 Permission denied.");
+                session.StringSend(string.Format("550 {0}", param));
+                Logger.Set(LogKind.Detail, session.SockCtrl, 13, string.Format("{0}", param));
                 return false;
             }
 
@@ -640,7 +701,7 @@ namespace FtpServer{
 
                 if (files.Length == 1){
                     String str = string.Format("150 Opening {0} mode data connection for {1} ({2} bytes).", session.FtpType.ToString().ToUpper(), param, files[0].Length);
-                    session.StringSend(str); //Shift-jis�ł���K�v������H
+                    session.StringSend(str); //Shift-jisである必要がある？
 
                     //DOWN start
                     Logger.Set(LogKind.Normal, session.SockCtrl, 11, string.Format("{0} {1}", session.OneUser.UserName, param));
@@ -664,7 +725,7 @@ namespace FtpServer{
             return true;
         }
 
-        //�t�@�C����M�i�o�C�i���j
+        //ファイル受信（バイナリ）
         private int RecvBinary(SockTcp sockTcp, String fileName){
             var sb = new StringBuilder();
             sb.Append(string.Format("RecvBinary({0}) ", fileName));
@@ -693,7 +754,7 @@ namespace FtpServer{
                 }
                 bw.Write(buf, 0, buf.Length);
 
-                //�g���[�X�\��
+                //トレース表示
                 sb.Append(string.Format("Binary={0}byte ", len));
                 size += len;
 
@@ -701,9 +762,9 @@ namespace FtpServer{
             bw.Flush();
             bw.Close();
             fs.Close();
-            
-            //noEncode = true; //�o�C�i���ł��鎖���������Ă���
-            //Trace(TraceKind.Send, Encoding.ASCII.GetBytes(sb.ToString()), true); //�g���[�X�\��
+
+            //noEncode = true; //バイナリである事が分かっている
+            //Trace(TraceKind.Send, Encoding.ASCII.GetBytes(sb.ToString()), true); //トレース表示
 
             return size;
         }
@@ -726,20 +787,20 @@ namespace FtpServer{
                         //}else{
                         sockTcp.Send(buf,len);
                         //}
-                        //�g���[�X�\��
+                        //トレース表示
                         sb.Append(string.Format("Binary={0}byte ", len));
                         size += len;
                     }
                 }
             }
 
-            //noEncode = true; //�o�C�i���ł��鎖���������Ă���
-            //Trace(TraceKind.Send, Encoding.ASCII.GetBytes(sb.ToString()), true); //�g���[�X�\��
+            //noEncode = true; //バイナリである事が分かっている
+            //Trace(TraceKind.Send, Encoding.ASCII.GetBytes(sb.ToString()), true); //トレース表示
             return size;
         }
 
 
-        //RemoteServer�ł̂ݎg�p�����
+        //RemoteServerでのみ使用される
         public override void Append(OneLog oneLog) {
 
         }
