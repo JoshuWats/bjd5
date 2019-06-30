@@ -578,6 +578,7 @@ namespace FtpServer{
                 session.StringSend(string.Format("213 {0}", files[0].Length));
                 return true;
             }
+            session.StringSend(string.Format("550 {0}: No such file or directory.", param));
             return true;
         }
 
