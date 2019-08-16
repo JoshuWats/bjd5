@@ -8,7 +8,7 @@ using Bjd.option;
 namespace FtpServer {
     public class Option : OneOption {
 
-        //public override string JpMenu { get { return "FTP�T�[�o"; } }
+        //public override string JpMenu { get { return "FTPサーバ"; } }
         //public override string EnMenu { get { return "FTP Server"; } }
         public override char Mnemonic { get { return 'F'; } }
 
@@ -29,17 +29,17 @@ namespace FtpServer {
             pageList.Add(PageAcl());
             Add(new OneVal("tab", null, Crlf.Nextline, new CtrlTabPage("tabPage", pageList)));
 
-            Read(kernel.IniDb); //�@���W�X�g������̓ǂݍ���
+            Read(kernel.IniDb); //レジストリからの読み込み
         }
 
         private OnePage Page1(string name, string title,Kernel kernel) {
             var onePage = new OnePage(name, title);
 
-            onePage.Add(CreateServerOption(ProtocolKind.Tcp, 21, 30, 50)); //�T�[�o��{�ݒ�
+            onePage.Add(CreateServerOption(ProtocolKind.Tcp, 21, 30, 50)); //サーバ基本設定
             var key = "bannerMessage";
             onePage.Add(new OneVal(key, "FTP ( $p Version $v ) ready", Crlf.Nextline, new CtrlTextBox(Lang.Value(key), 80)));
-            //���C�u�h�A���ʎd�l
-            //onePage.Add(new OneVal(new ValType(CRLF.NEXTLINE, VTYPE.FILE, (IsJp()) ? "�t�@�C����M���ɋN������X�N���v�g" : "auto run acript", 250,kernel), "autoRunScript","c:\\test.bat"));
+            //ライブドア特別仕様
+            //onePage.Add(new OneVal(new ValType(CRLF.NEXTLINE, VTYPE.FILE, (IsJp()) ? "ファイル受信時に起動するスクリプト" : "auto run acript", 250,kernel), "autoRunScript","c:\\test.bat"));
             key = "useSyst";
             onePage.Add(new OneVal(key, false, Crlf.Nextline, new CtrlCheckBox(Lang.Value(key))));
             key = "reservationTime";
@@ -73,10 +73,10 @@ namespace FtpServer {
             return onePage;
         }
 
-        //�R���g���[���̕ω�
+        //コントロールの変化
         override public void OnChange() {
 
-            // �|�[�g�ԍ��ύX�֎~
+            //ポート番号変更禁止
             GetCtrl("port").SetEnable(false);
 
             var b = (bool)GetCtrl("useServer").Read();

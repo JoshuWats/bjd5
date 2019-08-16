@@ -31,8 +31,5 @@ _ReSharper*/
 Setup/Setup/Express
 BJD/out
 BJDTest/$$Tmp.ini
-
-
-
-
+.vs/
 .DS_Store
