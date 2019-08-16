@@ -15,6 +15,8 @@ namespace SyslogServer
             {
                 case 1:
                     return Lang.Value(messageNo);
+                case 6:
+                    return "Notice";
                 case 7:
                     return "ReciveMsg";
             }
