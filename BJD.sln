@@ -1,6 +1,8 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2012
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29201.188
+MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BJD", "BJD\BJD.csproj", "{A219B3D7-33D9-4C73-814D-1909D067372B}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebServer", "WebServer\WebServer.csproj", "{C5D38963-2182-47AB-A34D-2F604B70A701}"
@@ -147,10 +149,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebApiServer", "WebApiServe
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebApiServerTest", "WebApiServerTest\WebApiServerTest.csproj", "{2FB252CF-D3DF-427F-B5B3-E3D5A65D721F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SyslogServer", "SyslogServer\SyslogServer.csproj", "{536AF2CA-B274-459F-BD20-D6B5D622DC0C}"
+EndProject
 Global
-	GlobalSection(TestCaseManagementSettings) = postSolution
-		CategoryFile = BJD1.vsmdi
-	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		CD_ROM|Any CPU = CD_ROM|Any CPU
 		CD_ROM|Mixed Platforms = CD_ROM|Mixed Platforms
@@ -1082,8 +1083,50 @@ Global
 		{2FB252CF-D3DF-427F-B5B3-E3D5A65D721F}.Tmp|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{2FB252CF-D3DF-427F-B5B3-E3D5A65D721F}.Tmp|Mixed Platforms.Build.0 = Release|Any CPU
 		{2FB252CF-D3DF-427F-B5B3-E3D5A65D721F}.Tmp|x86.ActiveCfg = Release|Any CPU
+		{536AF2CA-B274-459F-BD20-D6B5D622DC0C}.CD_ROM|Any CPU.ActiveCfg = Release|Any CPU
+		{536AF2CA-B274-459F-BD20-D6B5D622DC0C}.CD_ROM|Any CPU.Build.0 = Release|Any CPU
+		{536AF2CA-B274-459F-BD20-D6B5D622DC0C}.CD_ROM|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{536AF2CA-B274-459F-BD20-D6B5D622DC0C}.CD_ROM|Mixed Platforms.Build.0 = Release|Any CPU
+		{536AF2CA-B274-459F-BD20-D6B5D622DC0C}.CD_ROM|x86.ActiveCfg = Release|Any CPU
+		{536AF2CA-B274-459F-BD20-D6B5D622DC0C}.CD_ROM|x86.Build.0 = Release|Any CPU
+		{536AF2CA-B274-459F-BD20-D6B5D622DC0C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{536AF2CA-B274-459F-BD20-D6B5D622DC0C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{536AF2CA-B274-459F-BD20-D6B5D622DC0C}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{536AF2CA-B274-459F-BD20-D6B5D622DC0C}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{536AF2CA-B274-459F-BD20-D6B5D622DC0C}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{536AF2CA-B274-459F-BD20-D6B5D622DC0C}.Debug|x86.Build.0 = Debug|Any CPU
+		{536AF2CA-B274-459F-BD20-D6B5D622DC0C}.DVD-5|Any CPU.ActiveCfg = Debug|Any CPU
+		{536AF2CA-B274-459F-BD20-D6B5D622DC0C}.DVD-5|Any CPU.Build.0 = Debug|Any CPU
+		{536AF2CA-B274-459F-BD20-D6B5D622DC0C}.DVD-5|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{536AF2CA-B274-459F-BD20-D6B5D622DC0C}.DVD-5|Mixed Platforms.Build.0 = Debug|Any CPU
+		{536AF2CA-B274-459F-BD20-D6B5D622DC0C}.DVD-5|x86.ActiveCfg = Debug|Any CPU
+		{536AF2CA-B274-459F-BD20-D6B5D622DC0C}.DVD-5|x86.Build.0 = Debug|Any CPU
+		{536AF2CA-B274-459F-BD20-D6B5D622DC0C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{536AF2CA-B274-459F-BD20-D6B5D622DC0C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{536AF2CA-B274-459F-BD20-D6B5D622DC0C}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{536AF2CA-B274-459F-BD20-D6B5D622DC0C}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{536AF2CA-B274-459F-BD20-D6B5D622DC0C}.Release|x86.ActiveCfg = Release|Any CPU
+		{536AF2CA-B274-459F-BD20-D6B5D622DC0C}.Release|x86.Build.0 = Release|Any CPU
+		{536AF2CA-B274-459F-BD20-D6B5D622DC0C}.SingleImage|Any CPU.ActiveCfg = Release|Any CPU
+		{536AF2CA-B274-459F-BD20-D6B5D622DC0C}.SingleImage|Any CPU.Build.0 = Release|Any CPU
+		{536AF2CA-B274-459F-BD20-D6B5D622DC0C}.SingleImage|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{536AF2CA-B274-459F-BD20-D6B5D622DC0C}.SingleImage|Mixed Platforms.Build.0 = Release|Any CPU
+		{536AF2CA-B274-459F-BD20-D6B5D622DC0C}.SingleImage|x86.ActiveCfg = Release|Any CPU
+		{536AF2CA-B274-459F-BD20-D6B5D622DC0C}.SingleImage|x86.Build.0 = Release|Any CPU
+		{536AF2CA-B274-459F-BD20-D6B5D622DC0C}.Tmp|Any CPU.ActiveCfg = Release|Any CPU
+		{536AF2CA-B274-459F-BD20-D6B5D622DC0C}.Tmp|Any CPU.Build.0 = Release|Any CPU
+		{536AF2CA-B274-459F-BD20-D6B5D622DC0C}.Tmp|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{536AF2CA-B274-459F-BD20-D6B5D622DC0C}.Tmp|Mixed Platforms.Build.0 = Release|Any CPU
+		{536AF2CA-B274-459F-BD20-D6B5D622DC0C}.Tmp|x86.ActiveCfg = Release|Any CPU
+		{536AF2CA-B274-459F-BD20-D6B5D622DC0C}.Tmp|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {68CDE1AE-38BB-4F4D-8D37-AB15DC64EFAC}
+	EndGlobalSection
+	GlobalSection(TestCaseManagementSettings) = postSolution
+		CategoryFile = BJD1.vsmdi
 	EndGlobalSection
 EndGlobal
