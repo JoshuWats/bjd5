@@ -1,5 +1,4 @@
-﻿
-using Bjd;
+﻿using Bjd;
 using Bjd.option;
 using Bjd.util;
 
@@ -7,7 +6,7 @@ namespace DhcpServer {
     partial class Server {
         private readonly Dat _macAcl;
 
-        //BJD.Lang.txt�ɕK�v�Ȓ�`�������Ă��邩�ǂ����̊m�F
+        //BJD.Lang.txtに必要な定義が揃っているかどうかの確認
         protected override void CheckLang() {
             Lang.Value(1);
             for (var n = 3; n <= 6; n++) {
