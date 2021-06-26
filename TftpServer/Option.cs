@@ -37,6 +37,9 @@ namespace TftpServer {
             onePage.Add(new OneVal(key, false, Crlf.Nextline, new CtrlCheckBox(Lang.Value(key))));
             key = "override";
             onePage.Add(new OneVal(key, false, Crlf.Nextline, new CtrlCheckBox(Lang.Value(key))));
+            key = "retryCount";
+            onePage.Add(new OneVal(key, 1, Crlf.Nextline, new CtrlInt(Lang.Value(key), 3)));
+
             return onePage;
         }
 

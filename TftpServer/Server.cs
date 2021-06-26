@@ -185,6 +185,8 @@ namespace TftpServer {
             }
 
             br = new BinaryReader(fs);
+            // Init retry counter.
+            var retryCount = (int)Conf.Get("retryCount");
 
             while (true) {
                 var data = br.ReadBytes(512);
@@ -216,13 +218,32 @@ namespace TftpServer {
                     break;
                 //ACK番号が整合しているかどうかの確認
                 var ackNo = Util.htons(BitConverter.ToUInt16(buf,2));
-                if (no != ackNo) {
-                    Logger.Set(LogKind.Error,childObj,14,string.Format("no={0} ack={1}",no,ackNo));
+                //if (no != ackNo) {
+                //    Logger.Set(LogKind.Error,childObj,14,string.Format("no={0} ack={1}",no,ackNo));
+                //    //エラーとして処理する
+                //    childObj.Send(Bytes.Create(Util.htons((ushort)Opcode.Error),Util.htons(2),"unmatch ACK"));
+                //    goto end;
+                //}
+                //
+                //某所で頻繁にパケットが落ちてACK番号が整合しないケースを救済する 2021.6.27
+                if (no == 1 + ackNo)
+                {
+                    if (retryCount > 0)
+                    {
+                        continue;
+                    }
+                }
+                else if (no != ackNo)
+                {
+                    Logger.Set(LogKind.Error, childObj, 14, string.Format("no={0} ack={1}", no, ackNo));
                     //エラーとして処理する
-                    childObj.Send(Bytes.Create(Util.htons((ushort)Opcode.Error),Util.htons(2),"unmatch ACK"));
+                    childObj.Send(Bytes.Create(Util.htons((ushort)Opcode.Error), Util.htons(2), "unmatch ACK"));
                     goto end;
                 }
                 no++;//次のデータ
+                // Reset retry counter.
+                retryCount = (int)Conf.Get("retryCount");
+
             }
         end:
             if (br != null)

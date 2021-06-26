@@ -815,6 +815,7 @@ OptionTftp_workDir	作業フォルダ	A work folder
 OptionTftp_read	「読込み」を許可する	Reading permission
 OptionTftp_write	「書込み」を許可する	Writing permission
 OptionTftp_override	「上書き」を許可する	Override permission
+OptionTftp_retryCount	再送回数	Counts of retry
 
 
 #Message
