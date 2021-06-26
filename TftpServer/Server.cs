@@ -232,12 +232,13 @@ namespace TftpServer {
                     {
                         total -= data.Length;
                         retryCount--;
+                        Logger.Set(LogKind.Error, childObj, 14, string.Format("no={0} ack={1} marginal count={2}" , no, ackNo, retryCount));
                         continue;
                     }
                 }
                 else if (no != ackNo)
                 {
-                    Logger.Set(LogKind.Error, childObj, 14, string.Format("no={0} ack={1}", no, ackNo));
+                    Logger.Set(LogKind.Error, childObj, 14, string.Format("no={0} ack={1} Abort!", no, ackNo));
                     //エラーとして処理する
                     childObj.Send(Bytes.Create(Util.htons((ushort)Opcode.Error), Util.htons(2), "unmatch ACK"));
                     goto end;
