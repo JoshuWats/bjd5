@@ -8,7 +8,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyTitle("SyslogServer")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("")]
+[assembly: AssemblyCompany("Unknown 2019")]
 [assembly: AssemblyProduct("ForBlackJumboDog")]
 [assembly: AssemblyCopyright("Unknown 2019")]
 [assembly: AssemblyTrademark("ForBlackJumboDog")]
