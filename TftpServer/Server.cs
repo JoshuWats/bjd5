@@ -230,6 +230,8 @@ namespace TftpServer {
                 {
                     if (retryCount > 0)
                     {
+                        total -= data.Length;
+                        retryCount--;
                         continue;
                     }
                 }
