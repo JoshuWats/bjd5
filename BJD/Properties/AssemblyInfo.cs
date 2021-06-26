@@ -5,10 +5,10 @@ using System.Runtime.InteropServices;
 // アセンブリに関連付けられている情報を変更するには、
 // これらの属性値を変更してください。
 [assembly: AssemblyTitle("BJD")]
-[assembly: AssemblyDescription("")]
+[assembly: AssemblyDescription("customize")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("SapporoWorks")]
-[assembly: AssemblyProduct("BJD")]
+[assembly: AssemblyProduct("BJD customize")]
 [assembly: AssemblyCopyright("SIN")]
 [assembly: AssemblyTrademark("BlackJumboDog")]
 [assembly: AssemblyCulture("")]
@@ -28,8 +28,8 @@ using System.Runtime.InteropServices;
 //      Build Number
 //      Revision
 //
-[assembly: AssemblyVersion("6.2.0.2")]
-[assembly: AssemblyFileVersion("6.2.0.2")]
+[assembly: AssemblyVersion("6.2.0.3")]
+[assembly: AssemblyFileVersion("6.2.0.3")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("TestBJD")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("BJDTestProject")]
 
