@@ -23,72 +23,85 @@ using Bjd.util;
 using Bjd.wait;
 using Menu = Bjd.menu.Menu;
 
-namespace Bjd{
-    public class Kernel : IDisposable{
+// We can not read the Japanese source comment of 6.2.0, bacause the character code had flaw.
+// So we are restored it by 6.1.6. 
+// The 6.2.0 Kernel.cs is not changed in the source level from 6.1.6.
 
-        //�v���Z�X�N�����ɏ����������ϐ�
-        public RunMode RunMode { get; set; } //�ʏ�N��;
-        public bool EditBrowse { get; private set; } //�u�Q�Ɓv�̃e�L�X�g�{�b�N�X�̕ҏW
+namespace Bjd
+{
+    public class Kernel : IDisposable
+    {
+
+        //プロセス起動時に初期化される変数
+        public RunMode RunMode { get; set; } //通常起動;
+        public bool EditBrowse { get; private set; } //「参照」のテキストボックスの編集
         public Wait Wait { get; private set; }
-        public RemoteConnect RemoteConnect { get; set; } //�����[�g����Őڑ�����Ă��鎞���������������
+        public RemoteConnect RemoteConnect { get; set; } //リモート制御で接続されている時だけ初期化される
         public RemoteClient RemoteClient { get; private set; }
-        public TraceDlg TraceDlg { get; private set; } //�g���[�X�\��
+        public TraceDlg TraceDlg { get; private set; } //トレース表示
         public DnsCache DnsCache { get; private set; }
         public Ver Ver { get; private set; }
         public View View { get; private set; }
         public LogView LogView { get; private set; }
         public WindowSize WindowSize { get; private set; }
         public Menu Menu { get; private set; }
-        private readonly bool _isTest; //TEST�p��Kernel�𐶐�����ꍇ�Atrue�ɐݒ肳���
+        private readonly bool _isTest; //TEST用のKernelを生成する場合、trueに設定される
         public MailBox MailBox { get; private set; }
 
-    
 
-        //�T�[�o�N�����ɍŏ����������ϐ�
+
+        //サーバ起動時に最初期化される変数
         public ListOption ListOption { get; private set; }
         public ListServer ListServer { get; private set; }
-        public ListTool ListTool { get; private set; } //�c�[���Ǘ�
+        public ListTool ListTool { get; private set; } //ツール管理
         public LogFile LogFile { get; private set; }
         private bool _isJp = true;
         private Logger _logger;
 
         //Ver5.9.6
         public WebApi WebApi { get; private set; }
-        
+
         //Ver5.8.6
         public IniDb IniDb { get; private set; }
 
-    
-        //private MailBox mailBox = null; //���ۂɕK�v�ɂȂ������ɐ��������(SMTP�T�[�o�Ⴕ����POP3�T�[�o�̋N����)
+
+        //private MailBox mailBox = null; //実際に必要になった時に生成される(SMTPサーバ若しくはPOP3サーバの起動時)
 
 
-        public bool IsJp(){
+        public bool IsJp()
+        {
             return _isJp;
             //return (lang == Lang.JP) ? true : false;
         }
 
-        public string ServerName{
-            get{
+        public string ServerName
+        {
+            get
+            {
                 var oneOption = ListOption.Get("Basic");
-                if (oneOption != null){
-                    return (String) oneOption.GetValue("serverName");
+                if (oneOption != null)
+                {
+                    return (String)oneOption.GetValue("serverName");
                 }
                 return "";
             }
         }
 
-        //�e�X�g�p�R���X�g���N�^
-        public Kernel(){
+        //テスト用コンストラクタ
+        public Kernel()
+        {
             _isTest = true;
             DefaultInitialize(null, null, null, null);
         }
 
-        //�e�X�g�p�R���X�g���N�^(MailBox�̂ݏ�����)
-        public Kernel(String option){
+        //テスト用コンストラクタ(MailBoxのみ初期化)
+        public Kernel(String option)
+        {
             _isTest = true;
             DefaultInitialize(null, null, null, null);
 
-            if (option.IndexOf("MailBox") != -1){
+            if (option.IndexOf("MailBox") != -1)
+            {
                 var op = ListOption.Get("MailBox");
                 var conf = new Conf(op);
                 var dir = ReplaceOptionEnv((String)conf.Get("dir"));
@@ -98,77 +111,90 @@ namespace Bjd{
         }
 
 
-        //* �ʏ�g�p�����R���X�g���N�^
-        public Kernel(MainForm mainForm, ListView listViewLog, MenuStrip menuStrip, NotifyIcon notifyIcon){
+        //* 通常使用されるコンストラクタ
+        public Kernel(MainForm mainForm, ListView listViewLog, MenuStrip menuStrip, NotifyIcon notifyIcon)
+        {
             DefaultInitialize(mainForm, listViewLog, menuStrip, notifyIcon);
         }
 
-        //�N�����ɁA�R���X�g���N�^����Ăяo����鏉����
-        private void DefaultInitialize(MainForm mainForm, ListView listViewLog, MenuStrip menuStrip, NotifyIcon notifyIcon){
+        //起動時に、コンストラクタから呼び出される初期化
+        private void DefaultInitialize(MainForm mainForm, ListView listViewLog, MenuStrip menuStrip, NotifyIcon notifyIcon)
+        {
 
             RunMode = RunMode.Normal;
-            RemoteConnect = null;//�����[�g����Őڑ�����Ă��鎞���������������
+            RemoteConnect = null;//リモート制御で接続されている時だけ初期化される
 
-            //logger�����������܂ł̃��O��ꎞ�I�ɕۊǂ���
+            //loggerが生成されるまでのログを一時的に保管する
             //ArrayList<LogTemporary> tmpLogger = new ArrayList<>();
 
-            //�v���Z�X�N�����ɏ����������
+            //プロセス起動時に初期化される
             View = new View(this, mainForm, listViewLog, notifyIcon);
             //logView = new LogView(listViewLog);
-            LogView = new LogView(this,listViewLog);
-            Menu = new Menu(this, menuStrip); //�����ł́A�I�u�W�F�N�g�̐����̂݁Amenu.Initialize()�́AlistInitialize()�̒��ŌĂяo�����
+            LogView = new LogView(this, listViewLog);
+            Menu = new Menu(this, menuStrip); //ここでは、オブジェクトの生成のみ、menu.Initialize()は、listInitialize()の中で呼び出される
             DnsCache = new DnsCache();
             Wait = new Wait();
 
-            Ver = new Ver(); //�o�[�W�����Ǘ�
+            Ver = new Ver(); //バージョン管理
 
             //Java fix
-            //RunMode�̏�����
-            if (mainForm == null){
-                RunMode = RunMode.Service; //�T�[�r�X�N��
-            } else{
-                if (Environment.GetCommandLineArgs().Length > 1){
-                    RunMode = RunMode.Remote; //�����[�g�N���C�A���g
-                } else{
-                    //�T�[�r�X�o�^�̏�Ԃ�擾����
+            //RunModeの初期化
+            if (mainForm == null)
+            {
+                RunMode = RunMode.Service; //サービス起動
+            }
+            else
+            {
+                if (Environment.GetCommandLineArgs().Length > 1)
+                {
+                    RunMode = RunMode.Remote; //リモートクライアント
+                }
+                else
+                {
+                    //サービス登録の状態を取得する
                     var setupService = new SetupService(this);
                     if (setupService.IsRegist)
-                        RunMode = RunMode.NormalRegist; //�T�[�r�X�o�^�������
+                        RunMode = RunMode.NormalRegist; //サービス登録完了状態
                 }
             }
 
             //Ver5.8.6 Java fix
-            //OptionIni.Create(this); //�C���X�^���X�̏�����
-            
+            //OptionIni.Create(this); //インスタンスの初期化
+
             IniDb = new IniDb(ProgDir(), (RunMode == RunMode.Remote) ? "$remote" : "Option");
-            
+
             MailBox = null;
 
-            ListInitialize(); //�T�[�o�ċN���ŁA�ēx���s����鏉���� 
+            ListInitialize(); //サーバ再起動で、再度実行される初期化 
 
 
-            if (_isTest){
+            if (_isTest)
+            {
                 return;
             }
 
-            //�E�C���h�T�C�Y�̕���
+            //ウインドサイズの復元
             var path = string.Format("{0}\\BJD.ini", ProgDir());
-            try{
-                //�E�C���h�E�̊O�ς�ۑ��E����(View���O�ɏ���������)
+            try
+            {
+                //ウインドウの外観を保存・復元(Viewより前に初期化する)
                 WindowSize = new WindowSize(new Conf(ListOption.Get("Basic")), path);
                 View.Read(WindowSize);
-            } catch (IOException){
+            }
+            catch (IOException)
+            {
                 WindowSize = null;
-                // �w�肳�ꂽWindow���ۑ��t�@�C��(BJD.ini)��IO�G���[���������Ă���
+                // 指定されたWindow情報保存ファイル(BJD.ini)にIOエラーが発生している
                 _logger.Set(LogKind.Error, null, 9000022, path);
             }
 
-            //TraceDlg = new TraceDlg(this, (mainForm != null) ? mainForm.getFrame() : null); //�g���[�X�\��
-            TraceDlg = new TraceDlg(this); //�g���[�X�\��
+            //TraceDlg = new TraceDlg(this, (mainForm != null) ? mainForm.getFrame() : null); //トレース表示
+            TraceDlg = new TraceDlg(this); //トレース表示
 
-            switch (RunMode){
+            switch (RunMode)
+            {
                 case RunMode.Normal:
-                    MenuOnClick("StartStop_Start"); //���j���[�I��C�x���g
+                    MenuOnClick("StartStop_Start"); //メニュー選択イベント
                     break;
                 case RunMode.Remote:
                     RemoteClient = new RemoteClient(this);
@@ -184,56 +210,64 @@ namespace Bjd{
             }
 
             //Java fix Ver5.8.3
-            View.SetColor();//�E�C���h�F�̏�����
+            View.SetColor();//ウインド色の初期化
 
         }
 
-        //�T�[�o�ċN���ŁA�ēx���s����鏉����
-        public void ListInitialize(){
-            //Logger���g�p�ł��Ȃ��Ԃ̃��O�́A������ɕۑ����āA���Logger�ɑ���
+        //サーバ再起動で、再度実行される初期化
+        public void ListInitialize()
+        {
+            //Loggerが使用できない間のログは、こちらに保存して、後でLoggerに送る
             var tmpLogger = new TmpLogger();
 
             //************************************************************
-            // �j��
+            // 破棄
             //************************************************************
-            if (ListOption != null){
+            if (ListOption != null)
+            {
                 ListOption.Dispose();
                 ListOption = null;
             }
             //Java fix
-            if (ListTool != null){
+            if (ListTool != null)
+            {
                 ListTool.Dispose();
                 ListTool = null;
             }
-            if (ListServer != null){
+            if (ListServer != null)
+            {
                 ListServer.Dispose();
                 ListServer = null;
             }
-            if (MailBox != null){
+            if (MailBox != null)
+            {
                 MailBox = null;
             }
-            if (LogFile != null){
+            if (LogFile != null)
+            {
                 LogFile.Dispose();
                 LogFile = null;
             }
 
             //************************************************************
-            // ������
+            // 初期化
             //************************************************************
-            //ListPlugin �́BListOption��ListServer�����������Ԃ�����������
-            //isTest=true�̏ꍇ�A�p�X��""�ɂ��āA�v���O�C��0�ŏ�������������
+            //ListPlugin は。ListOptionとListServerを初期化する間だけ生存する
+            //isTest=trueの場合、パスを""にして、プラグイン0個で初期化さあせる
 
             //ListPlugin listPlugin = new ListPlugin((isTest) ? "" : string.Format("%s\\plugins", getProgDir()));
             var listPlugin = new ListPlugin(ProgDir());
-            foreach (var o in listPlugin){
-                //�����[�g�N���C�A���g�̏ꍇ�A���̃��O�́A��₱�����̂ŕ\�����Ȃ�
-                if (RunMode == RunMode.Normal){
+            foreach (var o in listPlugin)
+            {
+                //リモートクライアントの場合、このログは、ややこしいので表示しない
+                if (RunMode == RunMode.Normal)
+                {
                     tmpLogger.Set(LogKind.Detail, null, 9000008, string.Format("{0}Server", o.Name));
                 }
             }
 
-            //ListOption�Ŋe�I�v�V���������������O�ɁAisJp�����͏��������Ă����K�v������̂�
-            //�ŏ���OptionBasic��lang������ǂݏo��
+            //ListOptionで各オプションを初期化する前に、isJpだけは初期化しておく必要があるので
+            //最初にOptionBasicのlangだけを読み出す
             //Ver5.8.6 Java fix
             //_isJp = OptionIni.GetInstance().IsJp();
             _isJp = IniDb.IsJp();
@@ -241,60 +275,72 @@ namespace Bjd{
             ListOption = new ListOption(this, listPlugin);
 
             //Ver5.9.1
-            //���߂Ă�����ʉ߂���Ƃ��A�ߋ��̃o�[�W������Option��ǂݍ��ނ�
-            //���I�v�V�����̓I�u�W�F�N�g�̒���OneOption�ɂ̂ݕێ������
-            //���̏�ԂŁA�����̃I�v�V�����w���OK����ƁA���̃I�v�V�����ȊO��
-            //Option.ini�ɕۑ�����Ȃ����ߔj������Ă��܂�
-            //���̖��ɑΏ����邽�߁A�����ň�x�AOption.ini��ۑ����邱�Ƃɂ���
-            if (!_isTest){
+            //初めてここを通過するとき、過去のバージョンのOptionを読み込むと
+            //旧オプションはオブジェクトの中のOneOptionにのみ保持される
+            //この状態で、何かのオプション指定でOKすると、そのオプション以外が
+            //Option.iniに保存されないため破棄されてしまう
+            //この問題に対処するため、ここで一度、Option.iniを保存することにする
+            if (!_isTest)
+            {
                 ListOption.Save(IniDb);
             }
 
 
             //OptionBasic
             var confBasic = new Conf(ListOption.Get("Basic"));
-            EditBrowse = (bool) confBasic.Get("editBrowse");
+            EditBrowse = (bool)confBasic.Get("editBrowse");
 
             //OptionLog
             var confOption = new Conf(ListOption.Get("Log"));
-            LogView.SetFont((Font) confOption.Get("font"));
+            LogView.SetFont((Font)confOption.Get("font"));
 
-            if (RunMode == RunMode.Normal || RunMode == RunMode.Service){
-                //LogFile�̏�����
-                var saveDirectory = (String) confOption.Get("saveDirectory");
+            if (RunMode == RunMode.Normal || RunMode == RunMode.Service)
+            {
+                //LogFileの初期化
+                var saveDirectory = (String)confOption.Get("saveDirectory");
                 saveDirectory = ReplaceOptionEnv(saveDirectory);
-                var normalLogKind = (int) confOption.Get("normalLogKind");
-                var secureLogKind = (int) confOption.Get("secureLogKind");
-                var saveDays = (int) confOption.Get("saveDays");
+                var normalLogKind = (int)confOption.Get("normalLogKind");
+                var secureLogKind = (int)confOption.Get("secureLogKind");
+                var saveDays = (int)confOption.Get("saveDays");
                 //Ver6.0.7
                 var useLogFile = (bool)confOption.Get("useLogFile");
-                var useLogClear = (bool) confOption.Get("useLogClear");
-                if (!useLogClear){
-                    saveDays = 0; //���O�̎����폜�������ȏꍇ�AsaveDays��0��Z�b�g����
+                var useLogClear = (bool)confOption.Get("useLogClear");
+                if (!useLogClear)
+                {
+                    saveDays = 0; //ログの自動削除が無効な場合、saveDaysに0をセットする
                 }
-                if (saveDirectory == ""){
+                if (saveDirectory == "")
+                {
                     tmpLogger.Set(LogKind.Error, null, 9000045, "It is not appointed");
-                } else{
+                }
+                else
+                {
                     tmpLogger.Set(LogKind.Detail, null, 9000032, saveDirectory);
-                    try{
-                        LogFile = new LogFile(saveDirectory, normalLogKind, secureLogKind, saveDays,useLogFile);
-                    } catch (IOException e){
+                    try
+                    {
+                        LogFile = new LogFile(saveDirectory, normalLogKind, secureLogKind, saveDays, useLogFile);
+                    }
+                    catch (IOException e)
+                    {
                         LogFile = null;
                         tmpLogger.Set(LogKind.Error, null, 9000031, e.Message);
                     }
                 }
 
                 //Ver5.8.7 Java fix
-                //mailBox������
-                foreach (var o in ListOption) {
-                    //SmtpServer�Ⴕ���́APop3Server���g�p�����ꍇ�̂݃��[���{�b�N�X�����������                
-                    if (o.NameTag == "Smtp" || o.NameTag == "Pop3") {
-                        if (o.UseServer) {
+                //mailBox初期化
+                foreach (var o in ListOption)
+                {
+                    //SmtpServer若しくは、Pop3Serverが使用される場合のみメールボックスを初期化する                
+                    if (o.NameTag == "Smtp" || o.NameTag == "Pop3")
+                    {
+                        if (o.UseServer)
+                        {
                             var conf = new Conf(ListOption.Get("MailBox"));
-                            var dir = ReplaceOptionEnv((String) conf.Get("dir"));
-                            var datUser = (Dat) conf.Get("user");
+                            var dir = ReplaceOptionEnv((String)conf.Get("dir"));
+                            var datUser = (Dat)conf.Get("user");
                             var logger = CreateLogger("MailBox", (bool)conf.Get("useDetailsLog"), null);
-                            MailBox = new MailBox(logger,datUser, dir);
+                            MailBox = new MailBox(logger, datUser, dir);
                             break;
                         }
                     }
@@ -305,92 +351,102 @@ namespace Bjd{
             tmpLogger.Release(_logger);
 
 
-            //Ver5.8.7 Java fix �����[�g�N���C�A���g�̏ꍇ����[���{�b�N�X��쐬���Ă��܂��o�O��C��
-//            //mailBox������
-//            foreach (var o in ListOption){
-//                //SmtpServer�Ⴕ���́APop3Server���g�p�����ꍇ�̂݃��[���{�b�N�X�����������                
-//                if (o.NameTag == "Smtp" || o.NameTag == "Pop3"){
-//                    if (o.UseServer){
-//                        var conf = new Conf(ListOption.Get("MailBox"));
-//                        MailBox = new MailBox(this, conf);
-//                        break;
-//                    }
-//                }
-//            }
+            //Ver5.8.7 Java fix リモートクライアントの場合もメールボックスを作成してしまうバグを修正
+            //            //mailBox初期化
+            //            foreach (var o in ListOption){
+            //                //SmtpServer若しくは、Pop3Serverが使用される場合のみメールボックスを初期化する                
+            //                if (o.NameTag == "Smtp" || o.NameTag == "Pop3"){
+            //                    if (o.UseServer){
+            //                        var conf = new Conf(ListOption.Get("MailBox"));
+            //                        MailBox = new MailBox(this, conf);
+            //                        break;
+            //                    }
+            //                }
+            //            }
 
             ListServer = new ListServer(this, listPlugin);
 
             ListTool = new ListTool();
             ListTool.Initialize(this);
 
-            View.SetColumnText(); //Log�r���[�̃J�����e�L�X�g�̏�����
-            Menu.Initialize(IsJp()); //���j���[�\�z�i����e�[�u���̏������j
+            View.SetColumnText(); //Logビューのカラムテキストの初期化
+            Menu.Initialize(IsJp()); //メニュー構築（内部テーブルの初期化）
 
             WebApi = new WebApi();
 
         }
 
-        //Conf�̐���
-        //���O��ListOption������������Ă���K�v������
-        public Conf CreateConf(String nameTag){
-            if (ListOption == null){
+        //Confの生成
+        //事前にListOptionが初期化されている必要がある
+        public Conf CreateConf(String nameTag)
+        {
+            if (ListOption == null)
+            {
                 Util.RuntimeException("createConf() ListOption==null");
                 return null;
             }
             var oneOption = ListOption.Get(nameTag);
-            if (oneOption != null){
+            if (oneOption != null)
+            {
                 return new Conf(oneOption);
             }
             return null;
         }
 
-        //Logger�̐���
-        //���O��ListOption������������Ă���K�v������
-        public Logger CreateLogger(String nameTag, bool useDetailsLog, ILogger logger){
-            if (ListOption == null){
+        //Loggerの生成
+        //事前にListOptionが初期化されている必要がある
+        public Logger CreateLogger(String nameTag, bool useDetailsLog, ILogger logger)
+        {
+            if (ListOption == null)
+            {
                 Util.RuntimeException("CreateLogger() ListOption==null || LogFile==null");
             }
             var conf = CreateConf("Log");
-            if (conf == null){
-                //CreateLogger��g�p����ۂɁAOptionLog�������ł��Ȃ��̂́A�݌v��̖�肪����
+            if (conf == null)
+            {
+                //CreateLoggerを使用する際に、OptionLogが検索できないのは、設計上の問題がある
                 Util.RuntimeException("CreateLogger() conf==null");
                 return null;
             }
-            var dat = (Dat) conf.Get("limitString");
-            var isDisplay = ((int) conf.Get("isDisplay")) == 0;
+            var dat = (Dat)conf.Get("limitString");
+            var isDisplay = ((int)conf.Get("isDisplay")) == 0;
             var logLimit = new LogLimit(dat, isDisplay);
 
-            var useLimitString = (bool) conf.Get("useLimitString");
-            return new Logger(this,logLimit, LogFile, LogView, _isJp, nameTag, useDetailsLog, useLimitString, logger);
+            var useLimitString = (bool)conf.Get("useLimitString");
+            return new Logger(this, logLimit, LogFile, LogView, _isJp, nameTag, useDetailsLog, useLimitString, logger);
         }
 
-        //�I������
-        public void Dispose(){
+        //終了処理
+        public void Dispose()
+        {
 
             //	        if (RunMode != RunMode.Service && RunMode != RunMode.Remote) {
             //	            //**********************************************
-            //	            // ��U�t�@�C����폜���Č��ݗL���Ȃ�̂���������߂�
+            //	            // 一旦ファイルを削除して現在有効なものだけを書き戻す
             //	            //**********************************************
             //	            var iniDb = new IniDb(ProgDir(),"Option");
             //	            iniDb.DeleteIni();
 
             //Ver5.8.6 Java fix 
-            if (RunMode == RunMode.Normal) {
-                var iniTmp = new IniDb(ProgDir(), "$tmp");//�o�b�N�A�b�v��쐬����ini�t�@�C����폜����
-                //��U�A�ʃt�@�C���Ɍ��ݗL���Ȃ�̂���������߂�
+            if (RunMode == RunMode.Normal)
+            {
+                var iniTmp = new IniDb(ProgDir(), "$tmp");//バックアップを作成してiniファイルを削除する
+                //一旦、別ファイルに現在有効なものだけを書き戻す
                 ListOption.Save(iniTmp);
-                //�㏑������
-                File.Copy(iniTmp.Path, IniDb.Path,true);
+                //上書きする
+                File.Copy(iniTmp.Path, IniDb.Path, true);
                 iniTmp.Delete();
-            }else if (RunMode == RunMode.Remote){
-                IniDb.Delete(); //$Remote.ini�̍폜
             }
-            
+            else if (RunMode == RunMode.Remote)
+            {
+                IniDb.Delete(); //$Remote.iniの削除
+            }
+
 
             //**********************************************
-            // �j��
+            // 破棄
             //**********************************************
-            ListServer.Dispose(); //�e�T�[�o�͒�~�����
+            ListServer.Dispose(); //各サーバは停止される
             ListOption.Dispose();
             ListTool.Dispose();
             MailBox = null;
@@ -399,30 +455,36 @@ namespace Bjd{
                 RemoteClient.Dispose();
 
             View.Dispose();
-            if (TraceDlg != null){
+            if (TraceDlg != null)
+            {
                 TraceDlg.Dispose();
             }
-            if (Menu != null){
+            if (Menu != null)
+            {
                 Menu.Dispose();
             }
-            if (WindowSize != null){
+            if (WindowSize != null)
+            {
                 View.Save(WindowSize);
-                WindowSize.Dispose(); //Dispose���Ȃ���Reg.Dispose(�ۑ�)����Ȃ�
+                WindowSize.Dispose(); //DisposeしないとReg.Dispose(保存)されない
             }
         }
 
-        public string ProgDir(){
-            if (_isTest){
-                var dir = Directory.GetCurrentDirectory(); //�e�X�g�v���O�����̃f�B���N�g��
-                var src = Directory.GetParent(dir).Parent.FullName; //�e�X�g�R�[�h�̃f�B���N�g��
-                return Directory.GetParent(src) + "\\BJD\\out"; //���v���O�����̃f�B���N�g��
+        public string ProgDir()
+        {
+            if (_isTest)
+            {
+                var dir = Directory.GetCurrentDirectory(); //テストプログラムのディレクトリ
+                var src = Directory.GetParent(dir).Parent.FullName; //テストコードのディレクトリ
+                return Directory.GetParent(src) + "\\BJD\\out"; //実プログラムのディレクトリ
             }
             return Path.GetDirectoryName(Application.ExecutablePath);
         }
 
-        //�I�v�V�����Ŏw�肳���ϐ���u���ς���
+        //オプションで指定される変数を置き変える
 
-        public String ReplaceOptionEnv(String str){
+        public String ReplaceOptionEnv(String str)
+        {
             var executablePath = ProgDir();
             executablePath = executablePath.Replace("\\\\", "\\\\\\\\");
             str = str.Replace("%ExecutablePath%", executablePath);
@@ -435,53 +497,67 @@ namespace Bjd{
         //}
 
 
-        private void Start(){
+        private void Start()
+        {
 
-            //�T�[�r�X�o�^����Ă���ꍇ�̏���
-            if (RunMode == RunMode.NormalRegist){
+            //サービス登録されている場合の処理
+            if (RunMode == RunMode.NormalRegist)
+            {
                 //            var setupService = new SetupService(this);
                 //            if (setupService.Status != ServiceControllerStatus.Running) {
                 //                setupService.Job(ServiceCmd.Start);
                 //            }
-            } else{
-                if (ListServer.Count == 0){
+            }
+            else
+            {
+                if (ListServer.Count == 0)
+                {
                     _logger.Set(LogKind.Error, null, 9000030, "");
-                } else{
+                }
+                else
+                {
                     ListServer.Start();
                 }
             }
         }
 
-        private void Stop(){
+        private void Stop()
+        {
 
-            //�T�[�r�X�o�^����Ă���ꍇ�̏���
-            if (RunMode == RunMode.NormalRegist){
+            //サービス登録されている場合の処理
+            if (RunMode == RunMode.NormalRegist)
+            {
                 //            var setupService = new SetupService(this);
                 //            if (setupService.Status == ServiceControllerStatus.Running) {
                 //                setupService.Job(ServiceCmd.Stop);
                 //            }
-            } else{
+            }
+            else
+            {
                 ListServer.Stop();
             }
         }
 
-        //�����[�g����(�f�[�^�̎擾)
-        public string Cmd(string cmdStr){
+        //リモート操作(データの取得)
+        public string Cmd(string cmdStr)
+        {
             var sb = new StringBuilder();
 
 
-            sb.Append(IsJp() ? "(1) サービス状態" : "(1) Service Status"); //ステータス表示ダイアログに影響するここだけとりあえず文字化けなおす2019.8
+            sb.Append(IsJp() ? "(1) サービス状態" : "(1) Service Status");
             sb.Append("\b");
 
-            foreach (var sv in ListServer){
+            foreach (var sv in ListServer)
+            {
                 sb.Append("  " + sv);
                 sb.Append("\b");
             }
             sb.Append(" \b");
 
-            sb.Append(IsJp() ? "(2) ローカルアドレス" : "(2) Local address"); //ステータス表示ダイアログに影響するここだけとりあえず文字化けなおす2019.8
+            sb.Append(IsJp() ? "(2) ローカルアドレス" : "(2) Local address");
             sb.Append("\b");
-            foreach (string addr in Define.ServerAddressList()){
+            foreach (string addr in Define.ServerAddressList())
+            {
                 sb.Append(string.Format("  {0}", addr));
                 sb.Append("\b");
             }
@@ -490,17 +566,24 @@ namespace Bjd{
         }
 
 
-        //���j���[�I����̏���
-        public void MenuOnClick(String cmd){
-            if (cmd.IndexOf("Option_") == 0){
-                if (RunMode == RunMode.Remote){
-                    //Java fix RunMOde==Remote�̏ꍇ�̃��j���[����
+        //メニュー選択時の処理
+        public void MenuOnClick(String cmd)
+        {
+            if (cmd.IndexOf("Option_") == 0)
+            {
+                if (RunMode == RunMode.Remote)
+                {
+                    //Java fix RunMOde==Remoteの場合のメニュー処理
                     RemoteClient.MenuOnClick(cmd);
-                } else{
+                }
+                else
+                {
                     var oneOption = ListOption.Get(cmd.Substring(7));
-                    if (oneOption != null){
+                    if (oneOption != null)
+                    {
                         var dlg = new OptionDlg(this, oneOption);
-                        if (DialogResult.OK == dlg.ShowDialog()){
+                        if (DialogResult.OK == dlg.ShowDialog())
+                        {
                             //Ver5.8.6 Java fix
                             //oneOption.Save(OptionIni.GetInstance());
                             oneOption.Save(IniDb);
@@ -508,21 +591,28 @@ namespace Bjd{
                         }
                     }
                 }
-            } else if (cmd.IndexOf("Tool_") == 0){
-                if (RunMode == RunMode.Remote){
-                    //Java fix RunMOde==Remote�̏ꍇ�̃��j���[����
+            }
+            else if (cmd.IndexOf("Tool_") == 0)
+            {
+                if (RunMode == RunMode.Remote)
+                {
+                    //Java fix RunMOde==Remoteの場合のメニュー処理
                     RemoteClient.MenuOnClick(cmd);
-                } else{
+                }
+                else
+                {
                     var nameTag = cmd.Substring(5);
                     var oneTool = ListTool.Get(nameTag);
                     if (oneTool == null)
                         return;
 
-                    //BJD.EXE�ȊO�̏ꍇ�A�T�[�o�I�u�W�F�N�g�ւ̃|�C���^���K�v�ɂȂ�
+                    //BJD.EXE以外の場合、サーバオブジェクトへのポインタが必要になる
                     OneServer oneServer = null;
-                    if (nameTag != "BJD"){
+                    if (nameTag != "BJD")
+                    {
                         oneServer = ListServer.Get(nameTag);
-                        if (oneServer == null){
+                        if (oneServer == null)
+                        {
                             return;
                         }
                     }
@@ -530,12 +620,18 @@ namespace Bjd{
                     ToolDlg dlg = oneTool.CreateDlg(oneServer);
                     dlg.ShowDialog();
                 }
-            } else if (cmd.IndexOf("StartStop_") == 0){
-                if (RunMode == RunMode.Remote){
-                    //Java fix RunMOde==Remote�̏ꍇ�̃��j���[����
+            }
+            else if (cmd.IndexOf("StartStop_") == 0)
+            {
+                if (RunMode == RunMode.Remote)
+                {
+                    //Java fix RunMOde==Remoteの場合のメニュー処理
                     RemoteClient.MenuOnClick(cmd);
-                } else{
-                    switch (cmd){
+                }
+                else
+                {
+                    switch (cmd)
+                    {
                         case "StartStop_Start":
                             Start();
                             break;
@@ -553,18 +649,21 @@ namespace Bjd{
                             Start();
                             break;
                         case "StartStop_Service":
-                            SetupService(); //�T�[�r�X�̐ݒ�
+                            SetupService(); //サービスの設定
                             break;
                         default:
                             Util.RuntimeException(string.Format("cmd={0}", cmd));
                             break;
 
                     }
-                    View.SetColor(); //�E�C���h�̃J���[������
-                    Menu.SetEnable(); //��Ԃɉ������L���E����
+                    View.SetColor(); //ウインドのカラー初期化
+                    Menu.SetEnable(); //状態に応じた有効・無効
                 }
-            } else{
-                switch (cmd){
+            }
+            else
+            {
+                switch (cmd)
+                {
                     case "File_LogClear":
                         LogView.Clear();
                         break;
@@ -595,18 +694,23 @@ namespace Bjd{
 
         }
 
-        public String ChangeTag(String src){
-            var tagList = new[]{"$h", "$v", "$p", "$d", "$a", "$s"};
+        public String ChangeTag(String src)
+        {
+            var tagList = new[] { "$h", "$v", "$p", "$d", "$a", "$s" };
 
-            foreach (var tag in tagList){
-                while (true){
+            foreach (var tag in tagList)
+            {
+                while (true)
+                {
                     var index = src.IndexOf(tag);
-                    if (index == -1){
+                    if (index == -1)
+                    {
                         break;
                     }
                     var tmp1 = src.Substring(0, index);
                     var tmp2 = "";
-                    switch (tag){
+                    switch (tag)
+                    {
                         case "$h":
                             var serverName = ServerName;
                             tmp2 = serverName == "" ? "localhost" : serverName;
@@ -639,26 +743,34 @@ namespace Bjd{
             return src;
         }
 
-        //IP�A�h���X�̈ꗗ�擾
-        public List<Ip> GetIpList(String hostName){
+        //IPアドレスの一覧取得
+        public List<Ip> GetIpList(String hostName)
+        {
             var ar = new List<Ip>();
-            try{
+            try
+            {
                 var ip = new Ip(hostName);
                 ar.Add(ip);
-            } catch (ValidObjException){
+            }
+            catch (ValidObjException)
+            {
                 ar = DnsCache.GetAddress(hostName).ToList();
             }
             return ar;
         }
 
-        //�f�B���N�g�����擾�i�����[�g�N���C�A���g�p�j
-        public string GetBrowseInfo(string path){
+        //ディレクトリ情報取得（リモートクライアント用）
+        public string GetBrowseInfo(string path)
+        {
             var sb = new StringBuilder();
-            try{
-                if (path == ""){
-//�h���C�u�ꗗ�擾
+            try
+            {
+                if (path == "")
+                {
+                    //ドライブ一覧取得
                     var drives = Directory.GetLogicalDrives();
-                    foreach (string s in drives){
+                    foreach (string s in drives)
+                    {
                         var driveName = s.ToUpper().Substring(0, 1);
                         var info = new DriveInfo(driveName);
 
@@ -667,53 +779,65 @@ namespace Bjd{
                         var dt = new DateTime(0);
                         BrowseKind browseKind;
 
-                        if (info.DriveType == DriveType.Fixed){
+                        if (info.DriveType == DriveType.Fixed)
+                        {
                             browseKind = BrowseKind.DriveFixed;
-                        } else if (info.DriveType == DriveType.CDRom){
+                        }
+                        else if (info.DriveType == DriveType.CDRom)
+                        {
                             browseKind = BrowseKind.DriveCdrom;
-                        } else if (info.DriveType == DriveType.Removable){
+                        }
+                        else if (info.DriveType == DriveType.Removable)
+                        {
                             browseKind = BrowseKind.DriveRemovable;
-                        } else{
+                        }
+                        else
+                        {
                             continue;
                         }
-                        var p = new OneBrowse(browseKind, name, size, dt); //�P�f�[�^����
-                        sb.Append(p + "\t"); //���M�����񐶐�
+                        var p = new OneBrowse(browseKind, name, size, dt); //１データ生成
+                        sb.Append(p + "\t"); //送信文字列生成
 
                     }
-                } else{
+                }
+                else
+                {
                     string[] dirs = Directory.GetDirectories(path);
                     Array.Sort(dirs);
-                    foreach (string s in dirs){
+                    foreach (string s in dirs)
+                    {
                         var name = s.Substring(path.Length);
                         var info = new DirectoryInfo(s);
                         const long size = 0;
                         var dt = info.LastWriteTime;
-                        var p = new OneBrowse(BrowseKind.Dir, name, size, dt); //�P�f�[�^����
-                        sb.Append(p + "\t"); //���M�����񐶐�
+                        var p = new OneBrowse(BrowseKind.Dir, name, size, dt); //１データ生成
+                        sb.Append(p + "\t"); //送信文字列生成
                     }
                     var files = Directory.GetFiles(path);
                     Array.Sort(files);
-                    foreach (var s in files){
+                    foreach (var s in files)
+                    {
                         var name = s.Substring(path.Length);
                         var info = new FileInfo(s);
                         var size = info.Length;
                         var dt = info.LastWriteTime;
-                        var p = new OneBrowse(BrowseKind.File, name, size, dt); //�P�f�[�^����
-                        sb.Append(p + "\t"); //���M�����񐶐�
+                        var p = new OneBrowse(BrowseKind.File, name, size, dt); //１データ生成
+                        sb.Append(p + "\t"); //送信文字列生成
                     }
                 }
-            } catch{
+            }
+            catch
+            {
                 sb.Length = 0;
             }
             return sb.ToString();
         }
 
-        public void SetupService(){
-            //�ݒ�p�_�C�A���O�̕\��
+        public void SetupService()
+        {
+            //設定用ダイアログの表示
             var dlg = new SetupServiceDlg(this);
             dlg.ShowDialog();
         }
     }
 }
-
-
