@@ -133,9 +133,13 @@ namespace TftpServer {
             }
             if (modeStr.ToLower() == "netascii") {
                 tftpMode = TftpMode.Netascii;
-            } else if (modeStr.ToLower() == "octet") {
+                Logger.Set(LogKind.Normal, sockUdp, 15, "mode=netascii");
+            }
+            else if (modeStr.ToLower() == "octet") {
                 tftpMode = TftpMode.Octet;
-            } else {
+                Logger.Set(LogKind.Normal, sockUdp, 15, "mode=octet");
+            }
+            else {
                 Logger.Set(LogKind.Error,sockUdp,4,string.Format("mode={0}",modeStr));
                 return false;
             }

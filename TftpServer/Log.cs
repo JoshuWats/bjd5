@@ -4,7 +4,7 @@ namespace TftpServer {
         //BJD.Lang.txtに必要な定義が揃っているかどうかの確認
         protected override void CheckLang()
         {
-            for (var n = 1; n <= 14; n++)
+            for (var n = 1; n <= 15; n++)
             {
                 Lang.Value(n);
             }
@@ -27,6 +27,7 @@ namespace TftpServer {
                 case 12:
                 case 13:
                 case 14:
+                case 15:
                     return Lang.Value(messageNo);
             }
             return "unknown";
