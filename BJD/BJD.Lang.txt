@@ -818,7 +818,7 @@ OptionTftp_read	「読込み」を許可する	Reading permission
 OptionTftp_write	「書込み」を許可する	Writing permission
 OptionTftp_override	「上書き」を許可する	Override permission
 OptionTftp_retryCount	再送回数	Counts of retry
-
+OptionTftp_printCounter	送信カウンタを表示する	Print send counters
 
 #Message
 
@@ -837,6 +837,7 @@ ServerTftp_0012	「上書き」が許可されていない	There is already a fi
 ServerTftp_0013	ファイルが見つからない	A file is not found
 ServerTftp_0014	ACK番号の不整合が発生しました	Unmatch ACK number
 ServerTftp_0015	モード設定がセットされました	Set to mode parameter
+ServerTftp_0016	デバッグメッセージ	Debug messages
 
 
 ###############################################################
