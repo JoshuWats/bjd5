@@ -234,7 +234,8 @@ namespace TftpServer {
                 {
                     if (retryCount > 0)
                     {
-                        total -= data.Length;
+                        total -= data.Length; //pull back total count.
+                        fs.Position -= data.Length; //pull back filestream position.
                         retryCount--;
                         Logger.Set(LogKind.Error, childObj, 14, string.Format("no={0} ack={1} marginal count={2}" , no, ackNo, retryCount));
                         continue;
@@ -246,6 +247,10 @@ namespace TftpServer {
                     //エラーとして処理する
                     childObj.Send(Bytes.Create(Util.htons((ushort)Opcode.Error), Util.htons(2), "unmatch ACK"));
                     goto end;
+                }
+                if ((bool)Conf.Get("printCounter"))
+                {   // debug option.
+                    Logger.Set(LogKind.Debug, childObj, 16, string.Format("br_count={0} fs_position={1}", no, fs.Position));
                 }
                 no++;//次のデータ
                 // Reset retry counter.

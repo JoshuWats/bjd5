@@ -28,6 +28,7 @@ namespace TftpServer {
                 case 13:
                 case 14:
                 case 15:
+                case 16:
                     return Lang.Value(messageNo);
             }
             return "unknown";

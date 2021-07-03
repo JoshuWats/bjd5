@@ -39,7 +39,8 @@ namespace TftpServer {
             onePage.Add(new OneVal(key, false, Crlf.Nextline, new CtrlCheckBox(Lang.Value(key))));
             key = "retryCount";
             onePage.Add(new OneVal(key, 1, Crlf.Nextline, new CtrlInt(Lang.Value(key), 3)));
-
+            key = "printCounter";
+            onePage.Add(new OneVal(key, false, Crlf.Nextline, new CtrlCheckBox(Lang.Value(key))));
             return onePage;
         }
 
